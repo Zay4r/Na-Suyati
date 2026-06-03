@@ -1,0 +1,27 @@
+name: sadda_yone
+description: Real-time ultrasonic frequency detector and spectrum analyzer
+
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.1.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  record: 5.2.1
+  permission_handler: ^11.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+dependency_overrides:
+  record_platform_interface: 1.5.0
+  record_android: 1.2.0
+  record_linux: 0.6.0
+
+flutter:
+  uses-material-design: true
