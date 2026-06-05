@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.app{max-width:680px;margin:0 auto;padding:1rem 0}
+.tabs{display:flex;gap:8px;margin-bottom:1.5rem}
+.tab{flex:1;padding:10px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:var(--color-background-secondary);cursor:pointer;font-size:13px;color:var(--color-text-secondary);text-align:center;transition:all .15s}
+.tab.active{background:var(--color-background-primary);border-color:var(--color-border-primary);color:var(--color-text-primary);font-weight:500}
+.panel{display:none}.panel.active{display:block}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1.25rem;margin-bottom:1rem}
+.lbl{font-size:11px;color:var(--color-text-secondary);letter-spacing:.06em;display:block;margin-bottom:6px;text-transform:uppercase}
+textarea{width:100%;resize:vertical;min-height:72px;font-size:14px;padding:10px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-primary);font-family:var(--font-sans)}
+.row{display:flex;gap:8px;margin-top:12px}
+button{flex:1;padding:10px 14px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary);font-size:13px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+button:hover{background:var(--color-background-tertiary)}
+button:disabled{opacity:.35;cursor:not-allowed}
+button.blue{border-color:var(--color-border-info);color:var(--color-text-info)}
+button.green{border-color:var(--color-border-success);color:var(--color-text-success)}
+button.red{border-color:var(--color-border-danger);color:var(--color-text-danger)}
+.hint{font-size:12px;color:var(--color-text-secondary);margin-top:8px;line-height:1.6}
+.hint.ok{color:var(--color-text-success)}.hint.err{color:var(--color-text-danger)}.hint.live{color:var(--color-text-info)}
+canvas{width:100%;height:110px;display:block;border-radius:var(--border-radius-md);background:var(--color-background-tertiary)}
+.prog{height:3px;border-radius:2px;background:var(--color-background-tertiary);margin-top:10px;overflow:hidden}
+.prog-bar{height:100%;background:var(--color-text-info);border-radius:2px;width:0%;transition:width .08s}
+.msg-live{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px 14px;min-height:52px;font-size:16px;font-weight:500;color:var(--color-text-primary);word-break:break-all;border:0.5px solid var(--color-border-tertiary);letter-spacing:.02em}
+.log{margin-top:10px;max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.log-item{font-size:13px;padding:8px 12px;border-radius:var(--border-radius-md);background:var(--color-background-secondary);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border:0.5px solid var(--color-border-tertiary)}
+.log-msg{color:var(--color-text-primary);font-weight:500;word-break:break-all}
+.log-t{color:var(--color-text-tertiary);white-space:nowrap;font-size:11px;padding-top:2px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--color-text-tertiary);display:inline-block;flex-shrink:0}
+.dot.g{background:#22c55e}.dot.b{background:#3b82f6;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.meta{display:flex;align-items:center;gap:8px;margin-top:10px}
+.tip{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 14px;font-size:12px;color:var(--color-text-secondary);line-height:1.6;border:0.5px solid var(--color-border-tertiary);margin-top:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.stat{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px}
+.stat-val{font-size:15px;font-weight:500;color:var(--color-text-primary)}
+.stat-lbl{font-size:11px;color:var(--color-text-secondary);margin-top:2px}
+select{width:100%;padding:8px 10px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-primary);font-size:13px}
+</style>
+
+<div class="app">
+<h2 class="sr-only">Ultrasonic text transmitter and receiver — encodes messages as near-ultrasonic tones playable through any speaker</h2>
+
+<div class="tabs">
+  <div class="tab active" onclick="sw('send')"><i class="ti ti-radio" aria-hidden="true"></i> Send</div>
+  <div class="tab" onclick="sw('receive')"><i class="ti ti-ear" aria-hidden="true"></i> Receive</div>
+  <div class="tab" onclick="sw('debug')"><i class="ti ti-adjustments" aria-hidden="true"></i> Settings</div>
+</div>
+
+<div id="p-send" class="panel active">
+  <div class="card">
+    <span class="lbl">Message</span>
+    <textarea id="tx-text" placeholder="Type your message..." maxlength="48" oninput="onTxInput()"></textarea>
+    <div class="meta">
+      <i class="ti ti-clock" style="font-size:13px;color:var(--color-text-secondary)" aria-hidden="true"></i>
+      <span id="tx-dur" style="font-size:12px;color:var(--color-text-secondary)">—</span>
+    </div>
+    <div class="prog"><div class="prog-bar" id="tx-prog"></div></div>
+    <div class="row">
+      <button class="blue" id="btn-tx" onclick="doTx()"><i class="ti ti-player-play" aria-hidden="true"></i> Transmit</button>
+      <button id="btn-wav" onclick="doWav()" disabled><i class="ti ti-download" aria-hidden="true"></i> Save WAV</button>
+    </div>
+    <div class="hint" id="tx-hint">Enter a message and click Transmit — make sure volume is at max</div>
+  </div>
+  <div class="card">
+    <span class="lbl">Waveform preview</span>
+    <canvas id="tx-canvas"></canvas>
+    <div class="tip"><i class="ti ti-info-circle" style="font-size:13px;vertical-align:-1px" aria-hidden="true"></i> Using near-ultrasonic range (15–19 kHz) — works on laptop speakers and phone mics. Barely audible as a faint whine.</div>
+  </div>
+</div>
+
+<div id="p-receive" class="panel">
+  <div class="card">
+    <div class="row" style="margin-top:0">
+      <button class="green" id="btn-rx" onclick="toggleRx()"><i class="ti ti-microphone" aria-hidden="true"></i> Start listening</button>
+      <button onclick="clearRx()"><i class="ti ti-trash" aria-hidden="true"></i> Clear</button>
+    </div>
+    <div class="meta">
+      <span class="dot" id="rx-dot"></span>
+      <span id="rx-lbl" style="font-size:12px;color:var(--color-text-secondary)">Microphone off</span>
+    </div>
+  </div>
+  <div class="card">
+    <span class="lbl">Live spectrum (14–20 kHz)</span>
+    <canvas id="rx-canvas"></canvas>
+    <div class="meta">
+      <span id="rx-peak" style="font-size:12px;color:var(--color-text-secondary)">Peak: —</span>
+      <span style="margin-left:auto;font-size:12px;color:var(--color-text-secondary)" id="rx-db">Level: —</span>
+    </div>
+  </div>
+  <div class="card">
+    <span class="lbl">Currently receiving</span>
+    <div class="msg-live" id="rx-live">—</div>
+    <span class="lbl" style="margin-top:14px">Received messages</span>
+    <div class="log" id="rx-log"><div style="font-size:12px;color:var(--color-text-tertiary);padding:4px 0">No messages yet</div></div>
+  </div>
+</div>
+
+<div id="p-debug" class="panel">
+  <div class="card">
+    <span class="lbl">Frequency mode</span>
+    <select id="freq-mode" onchange="applyMode()">
+      <option value="near">Near-ultrasonic 15–19 kHz (recommended — works on most hardware)</option>
+      <option value="ultra">True ultrasonic 18–22 kHz (original — may miss chars on laptops)</option>
+    </select>
+    <div class="tip" style="margin-top:10px">Near-ultrasonic is slightly audible (faint whine) but works reliably across laptop speakers and phone mics. True ultrasonic is silent but many laptop mics roll off above 18 kHz.</div>
+  </div>
+  <div class="card">
+    <span class="lbl">Tone duration</span>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
+      <input type="range" min="100" max="400" step="50" value="200" id="tone-dur" oninput="document.getElementById('tone-val').textContent=this.value+'ms'" style="flex:1">
+      <span id="tone-val" style="font-size:13px;font-weight:500;min-width:40px;color:var(--color-text-primary)">200ms</span>
+    </div>
+    <div class="tip" style="margin-top:8px">Longer = more reliable, slower. 200ms is a good balance. Increase to 300–400ms if you still miss characters.</div>
+  </div>
+  <div class="card">
+    <span class="lbl">Decoder sensitivity</span>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
+      <input type="range" min="-80" max="-30" step="5" value="-50" id="thresh-sl" oninput="document.getElementById('thresh-val').textContent=this.value+'dB';MAG_THRESH=parseInt(this.value)" style="flex:1">
+      <span id="thresh-val" style="font-size:13px;font-weight:500;min-width:44px;color:var(--color-text-primary)">-50dB</span>
+    </div>
+    <div class="tip" style="margin-top:8px">Lower (more negative) = less sensitive, fewer false positives. Raise if you're not detecting anything. Start at -50dB.</div>
+  </div>
+  <div class="card">
+    <span class="lbl">Current protocol</span>
+    <div class="grid2" id="proto-grid"></div>
+  </div>
+</div>
+</div>
+
+<script>
+let SAMPLE_RATE=44100;
+let TONE_MS=200;
+let GAP_MS=80;
+let BEACON_MS=300;
+let BASE_FREQ=15000;
+let FREQ_STEP=40;
+let START_FREQ=14500;
+let END_FREQ=14200;
+let ASCII_MIN=32,ASCII_MAX=126;
+let MAG_THRESH=-50;
+let MIN_FRAMES=4;
+
+function applyMode(){
+  const m=document.getElementById('freq-mode').value;
+  if(m==='near'){BASE_FREQ=15000;FREQ_STEP=40;START_FREQ=14500;END_FREQ=14200;}
+  else{BASE_FREQ=18000;FREQ_STEP=40;START_FREQ=17500;END_FREQ=17200;}
+  updateProtoGrid();
+}
+
+function getToneDur(){return parseInt(document.getElementById('tone-dur').value)||200;}
+
+function charToFreq(c){return BASE_FREQ+(Math.min(ASCII_MAX,Math.max(ASCII_MIN,c.charCodeAt(0)))-ASCII_MIN)*FREQ_STEP;}
+function freqToChar(f){
+  if(Math.abs(f-START_FREQ)<100)return'\x02';
+  if(Math.abs(f-END_FREQ)<100)return'\x03';
+  const off=f-BASE_FREQ;
+  if(off<-100||off>(ASCII_MAX-ASCII_MIN)*FREQ_STEP+100)return null;
+  const idx=Math.round(off/FREQ_STEP);
+  if(idx<0||idx>ASCII_MAX-ASCII_MIN)return null;
+  return String.fromCharCode(ASCII_MIN+idx);
+}
+
+function genTone(freq,ms){
+  const n=Math.round(SAMPLE_RATE*ms/1000);
+  const b=new Float32Array(n);
+  for(let i=0;i<n;i++){const e=0.5*(1-Math.cos(2*Math.PI*i/(n-1)));b[i]=Math.sin(2*Math.PI*freq*i/SAMPLE_RATE)*e*0.85;}
+  return b;
+}
+function silence(ms){return new Float32Array(Math.round(SAMPLE_RATE*ms/1000));}
+function encode(text){
+  const td=getToneDur();
+  const parts=[genTone(START_FREQ,BEACON_MS),silence(GAP_MS)];
+  for(const c of text){parts.push(genTone(charToFreq(c),td),silence(GAP_MS));}
+  parts.push(genTone(END_FREQ,BEACON_MS));
+  const tot=parts.reduce((s,a)=>s+a.length,0);
+  const out=new Float32Array(tot);let off=0;
+  for(const p of parts){out.set(p,off);off+=p.length;}
+  return out;
+}
+function msgDur(text){const td=getToneDur();return(BEACON_MS+GAP_MS+text.length*(td+GAP_MS)+BEACON_MS)/1000;}
+
+let actx=null;
+function getCtx(){if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:SAMPLE_RATE});return actx;}
+
+function sw(t){
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['send','receive','debug'][i]===t));
+  document.querySelectorAll('.panel').forEach(el=>el.classList.remove('active'));
+  document.getElementById('p-'+t).classList.add('active');
+}
+
+function onTxInput(){
+  const t=document.getElementById('tx-text').value.trim();
+  document.getElementById('tx-dur').textContent=t?`~${msgDur(t).toFixed(1)}s · ${t.length}/48 chars`:'—';
+  document.getElementById('btn-wav').disabled=!t;
+  if(t)drawTxPreview(t);
+}
+
+function drawTxPreview(text){
+  const cv=document.getElementById('tx-canvas');
+  const ctx=cv.getContext('2d');
+  const W=cv.offsetWidth||600,H=110;
+  cv.width=W;cv.height=H;
+  ctx.clearRect(0,0,W,H);
+  const s=encode(text);
+  const step=Math.max(1,Math.floor(s.length/W));
+  ctx.beginPath();ctx.strokeStyle='#3b82f6';ctx.lineWidth=1;
+  const mid=H/2;
+  for(let x=0;x<W;x++){const y=mid-s[Math.min(x*step,s.length-1)]*mid*0.85;x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.stroke();
+}
+
+let txTimer=null;
+async function doTx(){
+  const text=document.getElementById('tx-text').value.trim();
+  if(!text)return;
+  const ctx=getCtx();
+  if(ctx.state==='suspended')await ctx.resume();
+  const samples=encode(text);
+  const buf=ctx.createBuffer(1,samples.length,SAMPLE_RATE);
+  buf.getChannelData(0).set(samples);
+  const src=ctx.createBufferSource();src.buffer=buf;src.connect(ctx.destination);
+  const dur=msgDur(text);
+  document.getElementById('btn-tx').disabled=true;
+  document.getElementById('tx-hint').textContent='Transmitting — keep volume at maximum…';
+  document.getElementById('tx-hint').className='hint live';
+  const t0=Date.now();
+  clearInterval(txTimer);
+  txTimer=setInterval(()=>{
+    const p=Math.min(1,(Date.now()-t0)/(dur*1000));
+    document.getElementById('tx-prog').style.width=(p*100)+'%';
+    if(p>=1){clearInterval(txTimer);document.getElementById('btn-tx').disabled=false;
+      document.getElementById('tx-hint').textContent='Done! Switch to Receive tab on the other device.';
+      document.getElementById('tx-hint').className='hint ok';}
+  },50);
+  src.start();
+}
+
+function doWav(){
+  const text=document.getElementById('tx-text').value.trim();if(!text)return;
+  const s=encode(text);
+  const pcm=new Int16Array(s.length);
+  for(let i=0;i<s.length;i++)pcm[i]=Math.max(-32768,Math.min(32767,Math.round(s[i]*32767)));
+  const wav=new ArrayBuffer(44+pcm.buffer.byteLength);
+  const v=new DataView(wav);
+  const ws=(o,str)=>{for(let i=0;i<str.length;i++)v.setUint8(o+i,str.charCodeAt(i));};
+  ws(0,'RIFF');v.setUint32(4,36+pcm.buffer.byteLength,true);ws(8,'WAVE');
+  ws(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,SAMPLE_RATE,true);v.setUint32(28,SAMPLE_RATE*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);
+  ws(36,'data');v.setUint32(40,pcm.buffer.byteLength,true);
+  new Uint8Array(wav,44).set(new Uint8Array(pcm.buffer));
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([wav],{type:'audio/wav'}));
+  a.download=`ultrasonic_${Date.now()}.wav`;a.click();
+  document.getElementById('tx-hint').textContent='WAV saved — play near the receiving device at full volume';
+  document.getElementById('tx-hint').className='hint ok';
+}
+
+let rxStream=null,rxAnalyser=null,rxAnim=null,isRx=false;
+let dec={cur:null,frames:0,started:false,inMsg:false,buf:''};
+
+async function toggleRx(){
+  if(isRx){stopRx();return;}
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,sampleRate:SAMPLE_RATE}});
+    const ctx=getCtx();if(ctx.state==='suspended')await ctx.resume();
+    rxStream=stream;
+    const src=ctx.createMediaStreamSource(stream);
+    rxAnalyser=ctx.createAnalyser();
+    rxAnalyser.fftSize=16384;
+    rxAnalyser.smoothingTimeConstant=0.05;
+    src.connect(rxAnalyser);
+    isRx=true;dec={cur:null,frames:0,started:false,inMsg:false,buf:''};
+    document.getElementById('btn-rx').innerHTML='<i class="ti ti-microphone-off" aria-hidden="true"></i> Stop';
+    document.getElementById('btn-rx').className='button red';
+    document.getElementById('rx-dot').className='dot b';
+    document.getElementById('rx-lbl').textContent='Listening — transmit from the other device now';
+    rxLoop();
+  }catch(e){document.getElementById('rx-lbl').textContent='Mic access denied — check browser permissions';}
+}
+
+function stopRx(){
+  isRx=false;cancelAnimationFrame(rxAnim);
+  rxStream?.getTracks().forEach(t=>t.stop());rxStream=null;rxAnalyser=null;
+  document.getElementById('btn-rx').innerHTML='<i class="ti ti-microphone" aria-hidden="true"></i> Start listening';
+  document.getElementById('btn-rx').className='button green';
+  document.getElementById('rx-dot').className='dot';
+  document.getElementById('rx-lbl').textContent='Microphone off';
+}
+
+function rxLoop(){
+  if(!isRx)return;
+  const fftSize=rxAnalyser.fftSize;
+  const sr=actx.sampleRate;
+  const data=new Float32Array(rxAnalyser.frequencyBinCount);
+  rxAnalyser.getFloatFrequencyData(data);
+  drawSpectrum(data,sr,fftSize);
+  decodeFrame(data,sr,fftSize);
+  rxAnim=requestAnimationFrame(rxLoop);
+}
+
+function drawSpectrum(data,sr,fftSize){
+  const cv=document.getElementById('rx-canvas');
+  const ctx=cv.getContext('2d');
+  const W=cv.offsetWidth||600,H=110;
+  cv.width=W;cv.height=H;
+  ctx.clearRect(0,0,W,H);
+  const minF=14000,maxF=20000;
+  const minB=Math.round(minF*fftSize/sr/2);
+  const maxB=Math.min(Math.round(maxF*fftSize/sr/2),data.length-1);
+  const bins=maxB-minB;
+  const dataZoneX=Math.round((BASE_FREQ-minF)/(maxF-minF)*W);
+  ctx.fillStyle='rgba(59,130,246,0.08)';
+  ctx.fillRect(dataZoneX,0,W-dataZoneX,H);
+  const startX=Math.round((START_FREQ-minF)/(maxF-minF)*W);
+  ctx.strokeStyle='rgba(34,197,94,0.4)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(startX,0);ctx.lineTo(startX,H);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();ctx.strokeStyle='#3b82f6';ctx.lineWidth=1.5;
+  let maxDb=-Infinity,maxX=0;
+  for(let i=0;i<bins;i++){
+    const b=minB+i;if(b>=data.length)break;
+    const db=Math.max(-100,data[b]);
+    if(db>maxDb){maxDb=db;maxX=i;}
+    const norm=(db+100)/70;
+    const x=i/bins*W;
+    const y=H*(1-Math.min(1,Math.max(0,norm)));
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+  if(maxDb>MAG_THRESH){
+    ctx.fillStyle='rgba(59,130,246,0.6)';
+    ctx.fillRect(maxX/bins*W-1,0,2,H);
+    const peakFreq=Math.round((minB+maxX)*sr/fftSize/2);
+    document.getElementById('rx-peak').textContent=`Peak: ${peakFreq.toLocaleString()} Hz`;
+    document.getElementById('rx-db').textContent=`Level: ${Math.round(maxDb)} dB`;
+  }else{
+    document.getElementById('rx-peak').textContent='Peak: —';
+    document.getElementById('rx-db').textContent='Level: —';
+  }
+}
+
+function decodeFrame(data,sr,fftSize){
+  const lo=Math.round((Math.min(START_FREQ,END_FREQ)-200)*fftSize/sr/2);
+  const hi=Math.round((BASE_FREQ+(ASCII_MAX-ASCII_MIN)*FREQ_STEP+200)*fftSize/sr/2);
+  let maxDb=-Infinity,maxBin=lo;
+  for(let i=lo;i<=hi&&i<data.length;i++){if(data[i]>maxDb){maxDb=data[i];maxBin=i;}}
+  if(maxDb<MAG_THRESH){
+    if(dec.cur!==null&&dec.frames>=MIN_FRAMES)commit(dec.cur);
+    dec.cur=null;dec.frames=0;return;
+  }
+  const freq=maxBin*sr/(fftSize/2);
+  const c=freqToChar(freq);
+  if(!c){dec.cur=null;dec.frames=0;return;}
+  if(c===dec.cur){dec.frames++;}
+  else{
+    if(dec.cur!==null&&dec.frames>=MIN_FRAMES)commit(dec.cur);
+    dec.cur=c;dec.frames=1;
+  }
+}
+
+function commit(c){
+  if(c==='\x02'){dec.started=true;dec.inMsg=true;dec.buf='';document.getElementById('rx-live').textContent='';}
+  else if(c==='\x03'){
+    if(dec.started&&dec.inMsg&&dec.buf){addMsg(dec.buf);}
+    dec.started=false;dec.inMsg=false;dec.buf='';document.getElementById('rx-live').textContent='—';
+  }else if(dec.inMsg){
+    dec.buf+=c;document.getElementById('rx-live').textContent=dec.buf;
+  }
+}
+
+function addMsg(msg){
+  const log=document.getElementById('rx-log');
+  if(log.querySelector('div[style]'))log.innerHTML='';
+  const d=document.createElement('div');d.className='log-item';
+  d.innerHTML=`<span class="log-msg">${msg}</span><span class="log-t">${new Date().toLocaleTimeString()}</span>`;
+  log.prepend(d);
+}
+
+function clearRx(){
+  document.getElementById('rx-log').innerHTML='<div style="font-size:12px;color:var(--color-text-tertiary);padding:4px 0">No messages yet</div>';
+  document.getElementById('rx-live').textContent='—';
+  dec={cur:null,frames:0,started:false,inMsg:false,buf:''};
+}
+
+function updateProtoGrid(){
+  document.getElementById('proto-grid').innerHTML=`
+    <div class="stat"><div class="stat-val">${START_FREQ.toLocaleString()} Hz</div><div class="stat-lbl">Start beacon</div></div>
+    <div class="stat"><div class="stat-val">${END_FREQ.toLocaleString()} Hz</div><div class="stat-lbl">End beacon</div></div>
+    <div class="stat"><div class="stat-val">${BASE_FREQ.toLocaleString()}+</div><div class="stat-lbl">Data base freq</div></div>
+    <div class="stat"><div class="stat-val">${FREQ_STEP} Hz</div><div class="stat-lbl">Step per char</div></div>`;
+}
+updateProtoGrid();
+</script>
+</html>
